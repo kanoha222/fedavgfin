@@ -6,7 +6,7 @@ import role.client as cli
 from torch.utils.data import DataLoader
 from abc import abstractmethod
 from tqdm import tqdm
-
+from role import cluster
 
 class Trainer:
     def __init__(self, batch_size, min_second, max_second, lap, log_path, save_path, epochs, max_run, batch_amp,
@@ -27,9 +27,9 @@ class Trainer:
 
         self.run_idx = None
         self.db = None
-        self.staff_user = None
-        self.model = None
-        self.optimizer = None
+        # self.staff_user = None
+        self.model_list = None
+        self.optimizer_list = None
         self.start_epoch, self.record = None, None
 
         self.eval_loader_list = None
@@ -37,7 +37,7 @@ class Trainer:
         self.staff_list = None
         # self.client_list = None
         self.sever = None
-
+        self.clusters = None
     def make_checkpoint(self):
         return utils.CheckPoint(self.log_path)
 
@@ -50,10 +50,11 @@ class Trainer:
         while self.check_run():
             self.run_idx = self.create_read_run()
             #读取训练记录中的staff_user
-            self.staff_user = self.sample_read_staff(**kwargs)
+            # self.staff_user = self.sample_read_staff(**kwargs)
             #创建模型和优化器
-            self.model = self.create_read_model()
-            self.optimizer = self.create_read_optimizer()
+            self.model_list = self.create_read_model_list()
+            self.optimizer_list = self.create_read_optimizer_list()
+            self.clusters = self.create_clusters()
             #读取训练记录中的start和record
             self.start_epoch, self.record = self.create_read_args()
             #创建数据加载器
@@ -111,15 +112,19 @@ class Trainer:
         return start, record
 
     @abstractmethod
-    def create_read_model(self):
+    def create_read_model_list(self):
         pass
 
-    def create_read_optimizer(self):
+    def create_read_optimizer_list(self):
         #adam优化器，用于优化模型参数
-        optimizer = torch.optim.Adam(self.model.parameters(), betas=(0.9, 0.99), weight_decay=0.0005)
-        if self.checkpoint.get('optimizer') is not None:
-            optimizer.load_state_dict(self.checkpoint.get('optimizer'))
-        return optimizer
+        for model in self.model_list:
+            optimizer = torch.optim.Adam(model.parameters(), betas=(0.9, 0.99), weight_decay=0.0005)
+            self.optimizer_list.append(optimizer)
+        if self.checkpoint.get('optimizer_list') is not None:
+            optimizers = self.checkpoint.get('optimizer_list')
+            for key,value in optimizers.items():
+                self.optimizer_list[key].load_state_dict(value)
+        return self.optimizer_list
     #创建数据库
     def make_eval_loaders(self):
         eval_loader_list = []
@@ -141,15 +146,15 @@ class Trainer:
     def make_staffs(self):
         staff_list = []
         for staff_idx in range(self.db.owner.user_count):
-            staff = cli.Staff(self.db.owner, staff_idx, self.db.sup_samples, self.model, self.sup_batch_size)
+            staff = cli.Staff(self.db.owner, staff_idx, self.db.sup_samples, self.model_list[staff_idx], self.sup_batch_size)
             staff.train_init(seconds=self.db.sup_seconds, fresh=self.db.sup_fresh, lap=0.)
             staff_list.append(staff)
 
         return staff_list
 
     def eval(self):
-        result_list = [train_utils.eval(self.model, self.eval_loader_list[user_idx], self.eval_score)
-                       for user_idx in range(self.db.owner.user_count) if user_idx not in self.staff_user]
+        result_list = [train_utils.eval(self.model_list[user_idx], self.eval_loader_list[user_idx], self.eval_score)
+                       for user_idx in range(self.db.owner.user_count)]
         mean_value = {key: np.mean([result[key] for result in result_list]) for key in result_list[0].keys()}
 
         return result_list, mean_value
@@ -164,7 +169,7 @@ class Trainer:
         self.checkpoint.write()
 
     def make_save_dict(self):
-        return {'model': self.model.cpu().state_dict(), 'staff_users': self.staff_user, 'record': self.record}
+        return {'model_list': [model.cpu().state_dict() for model in  self.model_list], 'record': self.record}
 
     @abstractmethod
     def make_clients(self):
@@ -207,7 +212,14 @@ class Trainer:
             self.record.append([ep, mean_value, result_list])
 
         if ep % (log_idx / 10) == 0:
-
-            self.checkpoint.update(start=ep, model=self.model.state_dict(), record=self.record,
-                                   optimizer=self.optimizer.state_dict(), **kwargs)
+            models = {}
+            opentimizers = {}
+            for index in self.db.owner.user_count:
+                models[index] = self.model_list[index].state_dict()
+                opentimizers[index] = self.optimizer_list[index].state_dict()
+            self.checkpoint.update(start=ep, models=models, record=self.record,
+                                   optimizers=opentimizers, **kwargs)
             self.checkpoint.write()
+def create_clusters(self):
+    for staff in self.staff_list:
+        self.cluster_list.append(cluster.cluster(staff,staff.model.optimizer))

@@ -16,7 +16,7 @@ class StochasticTrainer(trainer.Trainer):
             grad_dict = self.sup_compute(staff, verbose)
             staff_gl.append(grad_dict)
         if verbose:
-            train_utils.show_result(ep, [staff.train_score.value()['loss'] for staff in self.staff_list], )
+            train_utils.show_result(ep, [staff.train_score.value()['loss'] for staff in self.staff_list])
         self.sever.staff_gl += staff_gl
 
         # users = np.random.choice(len(self.client_list), size=self.sto_num, replace=False)

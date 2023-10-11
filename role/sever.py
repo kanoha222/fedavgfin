@@ -35,6 +35,7 @@ class NearSever(Sever):
             staff_grad = torch.mean(torch.stack([grad_dict[name] for grad_dict in self.staff_gl], dim=0), dim=0)
             # client_grad = torch.mean(torch.stack([grad_dict[name] for grad_dict in self.client_gl], dim=0), dim=0)
             param.grad = staff_grad.to(device)
+        #更新模型参数
         self.optimizer.step()
         self.optimizer.zero_grad()
         self.clear()

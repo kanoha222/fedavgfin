@@ -94,6 +94,7 @@ class Metric:
 
 
 def eval(model : ATTModel, eval_loader: DataLoader, score: Metric) -> dict:
+    #该方法用于评估模型的性能，将模型设置为评估模式
     model.eval()
     for xs, ys in eval_loader:
         ys = to_device(ys)
@@ -105,7 +106,7 @@ def eval(model : ATTModel, eval_loader: DataLoader, score: Metric) -> dict:
         loss = ce_loss + model.regular()
 
         score.step(loss={'eval_loss': loss}, labels=ys, preds=pred.max(dim=1)[1])
-
+    #将模型设置为训练模式
     model.train()
     return score.value()
 

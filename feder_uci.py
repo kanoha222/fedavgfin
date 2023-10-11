@@ -25,10 +25,9 @@ show_idx = 20
 log_idx = 50
 sup_batch_size = 128
 batch_amp = 1
-# agg = 40
 max_run = 1
-staff_user = None
-
+# agg = 40
+# staff_user = None
 # sto_num = 9
 
 
@@ -49,7 +48,7 @@ def stochastic_near_train(samples, epochs, staff_user, verbose=True):
         sup_samples=samples, semi_seconds=semi_seconds, semi_fresh=semi_fresh,
         time_window=time_window, allow_rate=allow_rate,
         freq_rate=freq_rate, data_path=path). \
-        start(staff_user=staff_user, verbose=verbose, show_idx=10, log_idx=log_idx)
+        start(verbose=verbose, show_idx=10, log_idx=log_idx)
 
 if __name__ == '__main__':
     epochs = 200
@@ -57,5 +56,5 @@ if __name__ == '__main__':
     idx = 0
     samples = database.Uci.SAMPLES_1
     np.random.seed(seeds[idx])
-    staff_user = [i for i in range(1,database.Uci.CLIENTS + 1)] * max_run
-    stochastic_near_train(samples=samples, epochs=epochs, staff_user=staff_user, verbose=True)
+    # staff_user = [i for i in range(1,database.Uci.CLIENTS + 1)] * max_run
+    stochastic_near_train(samples=samples, epochs=epochs, verbose=True)

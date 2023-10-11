@@ -28,15 +28,17 @@ class StochasticNearTrainer(stochastic_trainer.StochasticTrainer):
 
         return sever
     #创建模型
-    def create_read_model(self):
+    def create_read_model_list(self):
         model = att_model.UciATTModel(self.db.owner.class_num, self.db.owner.sensor_dim, self.db.owner.num_in_sensors,
                                        self.db.owner.devices, series_dropout=0.2, device_dropout=0.2, sensor_dropout=0.2,
                                        predict_dropout=0.4).float().to(device) #设置几个注意力层的dropout率，将数据转化为float类型并放到gpu上
+        self.model_list = [model] * self.db.owner.user_count
         #从checkpoint中读取预训练模型
-        if self.checkpoint.get('model') is not None:
-            model.load_state_dict(self.checkpoint.get('model'))
+        if self.checkpoint.get('model_list') is not None:
+            for idx in range(self.db.owner.user_count):
+                self.model_list[idx].load_state_dict(self.checkpoint.get('model_list')[idx])
 
-        return model
+        return self.model_list
 
     def sup_compute(self, staff, metric):
         return staff.compute_grad(metric=metric)
