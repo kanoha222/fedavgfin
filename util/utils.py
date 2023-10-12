@@ -42,7 +42,8 @@ def sample_staffs(max_run, clients, staff_num, seed):
         seed = seed + 1
 
     return staff_user
-
+def cos_similarities(self,staff_gl):
+    pass
 
 class CheckPoint:
     def __init__(self, path, info=None):

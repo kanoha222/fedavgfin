@@ -1,4 +1,6 @@
 import numpy as np
+
+import util.utils
 from util import utils, data_process, train_utils, data_util
 from abc import abstractmethod
 from train import trainer
@@ -11,10 +13,15 @@ class StochasticTrainer(trainer.Trainer):
 
 
     def train_step(self, ep, verbose, show_idx, log_idx):
-        staff_gl = []
-        for staff in self.staff_list:
-            grad_dict = self.sup_compute(staff, verbose)
-            staff_gl.append(grad_dict)
+        staff_gl = []#存储所有cluster的梯度
+        for cluster in self.clusters:
+            staff_gl.append(self.sup_compute(cluster, verbose))
+        if ep > 4:
+            simility_metric = util.utils.cos_similarities(staff_gl)
+            self.clusters_update(simility_metric)
+
+
+
         if verbose:
             train_utils.show_result(ep, [staff.train_score.value()['loss'] for staff in self.staff_list])
         self.sever.staff_gl += staff_gl
@@ -33,7 +40,7 @@ class StochasticTrainer(trainer.Trainer):
         self.log_step(verbose, show_idx, log_idx, ep)
 
     @abstractmethod
-    def sup_compute(self, staff, metric) -> dict:
+    def sup_compute(self, cluster, metric) -> dict:
         pass
 
     @abstractmethod

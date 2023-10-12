@@ -190,10 +190,7 @@ class Trainer:
         epoch = range(self.start_epoch + 1, self.epochs + 1)
         epoch = tqdm(epoch) if verbose or tqdm_verbose else epoch
         for ep in epoch:
-            if ep <= 4:
-                flag = self.train_step(ep, verbose, show_idx, log_idx)
-            else:
-                return;
+            flag = self.train_step(ep, verbose, show_idx, log_idx)
             if flag:
                 break
 
@@ -220,6 +217,9 @@ class Trainer:
             self.checkpoint.update(start=ep, models=models, record=self.record,
                                    optimizers=opentimizers, **kwargs)
             self.checkpoint.write()
-def create_clusters(self):
-    for staff in self.staff_list:
-        self.cluster_list.append(cluster.cluster(staff,staff.model.optimizer))
+    def create_clusters(self):
+        for staff in self.staff_list:
+            self.cluster_list.append(cluster.cluster([staff], [self.optimizer_list[staff.user_idx]]))
+
+    def clusters_update(simility_metric):
+        pass

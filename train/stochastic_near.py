@@ -1,5 +1,4 @@
 from util.device import device
-import role.online_client as onc
 import role.sever as sev
 from train import database, stochastic_trainer
 from model import att_model
@@ -23,8 +22,8 @@ class StochasticNearTrainer(stochastic_trainer.StochasticTrainer):
     #     return client_list
 
     def make_sever(self):
-        sever = sev.NearSever(self.model)
-        sever.train_init(self.optimizer)
+        sever = sev.NearSever()
+        sever.train_init()
 
         return sever
     #创建模型
@@ -40,8 +39,8 @@ class StochasticNearTrainer(stochastic_trainer.StochasticTrainer):
 
         return self.model_list
 
-    def sup_compute(self, staff, metric):
-        return staff.compute_grad(metric=metric)
+    def sup_compute(self, cluster, metric):
+        return cluster.compute_grad_gl(metric=metric)
 
     # def semi_compute(self, client, metric):
     #     return client.compute_grad(metric=metric)

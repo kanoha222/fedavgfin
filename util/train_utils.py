@@ -254,3 +254,5 @@ class ValueStopper:
         self.patience = state['patience']
         self.max_well = state['max_well']
         self.epoch = state['epoch']
+
+

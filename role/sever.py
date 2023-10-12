@@ -8,12 +8,11 @@ from abc import abstractmethod
 from copy import deepcopy
 
 class Sever:
-    def __init__(self, model: nn.Module):
-        self.model = model
+    def __init__(self):
         self.staff_gl = []
 
-    def train_init(self, optimizer):
-        self.optimizer = optimizer
+    def train_init(self):
+        pass
 
     @abstractmethod
     def mean_update(self, *args, **kwargs):
@@ -25,21 +24,19 @@ class Sever:
 
 class NearSever(Sever):
     def __init__(self, *args, **kwargs):
-        super(NearSever, self).__init__(*args, **kwargs)
+        super(NearSever, self).__init__()
     #
     def mean_update(self):
         #将模型参数转移到GPU上
-        self.model = self.model.to(device)
-        #对于每个参数，计算所有客户端的梯度的平均值
-        for name, param in self.model.named_parameters():
-            staff_grad = torch.mean(torch.stack([grad_dict[name] for grad_dict in self.staff_gl], dim=0), dim=0)
-            # client_grad = torch.mean(torch.stack([grad_dict[name] for grad_dict in self.client_gl], dim=0), dim=0)
-            param.grad = staff_grad.to(device)
-        #更新模型参数
-        self.optimizer.step()
-        self.optimizer.zero_grad()
-        self.clear()
-
+        # self.model = self.model.to(device)
+        # #对于每个参数，计算所有客户端的梯度的平均值
+        # for name, param in self.model.named_parameters():
+        #     staff_grad = torch.mean(torch.stack([grad_dict[name] for grad_dict in self.staff_gl], dim=0), dim=0)
+        #     # client_grad = torch.mean(torch.stack([grad_dict[name] for grad_dict in self.client_gl], dim=0), dim=0)
+        #     param.grad = staff_grad.to(device)
+        #
+        # self.clear()
+        pass
 # class SuperSever(Sever):
 #     def __init__(self, *args, **kwargs):
 #         super(SuperSever, self).__init__(*args, **kwargs)
