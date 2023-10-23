@@ -26,12 +26,13 @@ log_idx = 50
 sup_batch_size = 128
 batch_amp = 1
 max_run = 1
+cluster_limit = 0.75
 # agg = 40
 # staff_user = None
 # sto_num = 9
 
 
-def stochastic_near_train(samples, epochs, staff_user, verbose=True):
+def stochastic_near_train(samples, epochs, verbose=True):
     name = 'stochastic_near'
     stochastic_near.UciStochasticNearTrainer(
         batch_size=batch_size, min_second=min_second, max_second=max_second, lap=0.,
@@ -47,7 +48,7 @@ def stochastic_near_train(samples, epochs, staff_user, verbose=True):
         sup_seconds=sup_seconds,
         sup_samples=samples, semi_seconds=semi_seconds, semi_fresh=semi_fresh,
         time_window=time_window, allow_rate=allow_rate,
-        freq_rate=freq_rate, data_path=path). \
+        freq_rate=freq_rate, data_path=path,cluster_limit=cluster_limit). \
         start(verbose=verbose, show_idx=10, log_idx=log_idx)
 
 if __name__ == '__main__':

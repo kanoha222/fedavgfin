@@ -7,10 +7,10 @@ from torch.utils.data import DataLoader
 from abc import abstractmethod
 from tqdm import tqdm
 from role import cluster
-
+import torch
 class Trainer:
     def __init__(self, batch_size, min_second, max_second, lap, log_path, save_path, epochs, max_run, batch_amp,
-                 sup_batch_size, eval_seed):
+                 sup_batch_size, eval_seed,cluster_limit):
         self.max_run = max_run
         self.batch_size = batch_size
         self.min_second = min_second
@@ -22,7 +22,7 @@ class Trainer:
         self.batch_amp = batch_amp
         self.sup_batch_size = sup_batch_size
         self.eval_seed = eval_seed
-
+        self.cluster_limit = cluster_limit
         self.checkpoint = self.make_checkpoint()
 
         self.run_idx = None
@@ -49,23 +49,21 @@ class Trainer:
 
         while self.check_run():
             self.run_idx = self.create_read_run()
-            #读取训练记录中的staff_user
-            # self.staff_user = self.sample_read_staff(**kwargs)
             #创建模型和优化器
             self.model_list = self.create_read_model_list()
             self.optimizer_list = self.create_read_optimizer_list()
-            self.clusters = self.create_clusters()
+
             #读取训练记录中的start和record
             self.start_epoch, self.record = self.create_read_args()
             #创建数据加载器
             self.eval_loader_list = self.make_eval_loaders()
             self.sever = self.make_sever()
-
+            #创建客户端列表
             self.staff_list = self.make_staffs()
-            #online客户端可删
-            # self.client_list = self.make_clients()
+            #创建聚类list
+            self.clusters = self.create_clusters()
+            #创建评分
             self.eval_score = self.make_score()
-
             self.before_train(kwargs['verbose'])
             self.train(verbose=kwargs['verbose'], show_idx=kwargs['show_idx'], log_idx=kwargs['log_idx'],
                        tqdm_verbose=kwargs['tqdm_verbose'] if 'tqdm_verbose' in kwargs.keys() else None)
@@ -97,7 +95,7 @@ class Trainer:
             if 'staff_user' in kwargs.keys() and kwargs['staff_user'][self.run_idx] is not None:
                 staff_user = kwargs['staff_user'][self.run_idx]
             else:
-                staff_user = [i for i in range(1,self.database.Uci.CLIENTS + 1)]
+                staff_user = [i for i in range(1,self.db.Uci.CLIENTS + 1)]
             self.checkpoint.update(staff_user=staff_user)
 
         return staff_user
@@ -116,15 +114,16 @@ class Trainer:
         pass
 
     def create_read_optimizer_list(self):
+        optimizer_list = []
         #adam优化器，用于优化模型参数
         for model in self.model_list:
             optimizer = torch.optim.Adam(model.parameters(), betas=(0.9, 0.99), weight_decay=0.0005)
-            self.optimizer_list.append(optimizer)
+            optimizer_list.append(optimizer)
         if self.checkpoint.get('optimizer_list') is not None:
             optimizers = self.checkpoint.get('optimizer_list')
             for key,value in optimizers.items():
-                self.optimizer_list[key].load_state_dict(value)
-        return self.optimizer_list
+                optimizer_list[key].load_state_dict(value)
+        return optimizer_list
     #创建数据库
     def make_eval_loaders(self):
         eval_loader_list = []
@@ -155,6 +154,7 @@ class Trainer:
     def eval(self):
         result_list = [train_utils.eval(self.model_list[user_idx], self.eval_loader_list[user_idx], self.eval_score)
                        for user_idx in range(self.db.owner.user_count)]
+        #评估模式下的平均损失
         mean_value = {key: np.mean([result[key] for result in result_list]) for key in result_list[0].keys()}
 
         return result_list, mean_value
@@ -218,8 +218,17 @@ class Trainer:
                                    optimizers=opentimizers, **kwargs)
             self.checkpoint.write()
     def create_clusters(self):
+        clusters = []
         for staff in self.staff_list:
-            self.cluster_list.append(cluster.cluster([staff], [self.optimizer_list[staff.user_idx]]))
-
-    def clusters_update(simility_metric):
+            clusters.append(cluster.cluster([staff], [self.optimizer_list[staff.user_idx]]))
+        return clusters
+    def clusters_update(self,simility_metrix,cluster_limit):
+        max_cosine_index = simility_metrix.unstack().idxmax()
+        max_cosine_value = simility_metrix.unstack().max()
+        if max_cosine_value > cluster_limit:
+            self.clusters[max_cosine_index[0]].staff_list.append(self.clusters[max_cosine_index[1]].staff_list)
+            self.clusters[max_cosine_index[0]].optimizer_list.append(self.clusters[max_cosine_index[1]].optimizer_list)
+            self.clusters[max_cosine_index[0]].staff_gl.append(self.clusters[max_cosine_index[1]].staff_gl)
+            self.clusters.remove(self.clusters[max_cosine_index[1]])
+    def cos_similarities(self):
         pass

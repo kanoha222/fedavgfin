@@ -4,6 +4,7 @@ import shutil
 import numpy as np
 
 
+
 def read_pkl(path: str):
     f = open(path, 'rb+')
     data = pickle.load(f)
@@ -42,8 +43,7 @@ def sample_staffs(max_run, clients, staff_num, seed):
         seed = seed + 1
 
     return staff_user
-def cos_similarities(self,staff_gl):
-    pass
+
 
 class CheckPoint:
     def __init__(self, path, info=None):
