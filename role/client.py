@@ -7,13 +7,14 @@ from torch.utils.data import DataLoader
 from util.device import device, to_device
 from typing import List
 from abc import abstractmethod
-
-
+import wandb
+from util.utils import gaussian_noise
 class Client:
     def __init__(self, owner: data_process.DataOwner, model: mod.ATTModel, batch_size=256):
         self.owner = owner
         self.model = model
         self.batch_size = batch_size
+        self.is_local = False
 
     @abstractmethod
     def train_init(self, *args, **kwargs):
@@ -30,11 +31,11 @@ class Staff(Client):
         self.user_idx = user_idx
         self.samples = samples
         self.action_tup = self.owner.get_time_tup(user_idx, samples)
-
     def train_init(self, seconds=250, fresh=3, lap=0.):
         self.generator = self.generate(seconds, fresh, lap)
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.train_score = train_utils.Metric()
+
 
     def generate(self, seconds, fresh, lap):
         while True:
@@ -50,7 +51,7 @@ class Staff(Client):
                     yield xys
                     xys = next(loader)
 
-    def compute_grad(self, *args, **kwargs):
+    def compute_grad(self,*args, **kwargs):
         self.model = self.model.to(device)
         self.model.train()
         xs, ys = next(self.generator)
@@ -73,6 +74,6 @@ class Staff(Client):
         #将梯度转化为tensor类型
         for name, param in self.model.named_parameters():
             grad_dict[name] = torch.tensor(param.grad.data.clone().detach().cpu().tolist())
-
+            # grad_dict[name] += gaussian_noise(grad_dict[name].shape,s,sigma, device='cpu')
         self.model.zero_grad()
         return grad_dict

@@ -2,7 +2,7 @@ import pickle
 import os
 import shutil
 import numpy as np
-
+import torch
 
 
 def read_pkl(path: str):
@@ -43,9 +43,13 @@ def sample_staffs(max_run, clients, staff_num, seed):
         seed = seed + 1
 
     return staff_user
+def gaussian_noise(data_shape, s, sigma, device=None):
+    """
+    Gaussian noise
+    """
+    return torch.normal(0, sigma * s, data_shape).to(device)
 
-
-class CheckPoint:
+class Point:
     def __init__(self, path, info=None):
         self.path = path
         if os.path.exists(self.path):

@@ -1,43 +1,23 @@
-root = '/root/project/fos'
-
+root = '/home/jovyan/input/yb_uci_dataset/'
+out = '/home/jovyan/work'
 # raw data root
-raw_realworld_root = root + '/data/raw/realworld/'
-raw_realworld =  root + '/data/raw/realworld/proband{user_idx}/data/{sensor}_{action}_csv.zip'
-raw_realworld_csv = '{sensor}_{action}_{loc}.csv'
 
-raw_uci =  root + '/data/raw/UCI HAR Dataset/{group}/Inertial Signals/{loc}_{sensor}_{axis}_{group}.txt'
-raw_uci_label =  root + '/data/raw/UCI HAR Dataset/{group}/y_{group}.txt'
-raw_uci_subject =  root + '/data/raw/UCI HAR Dataset/{group}/subject_{group}.txt'
-
-raw_gleam =  root + '/data/raw/GLEAM/{user_idx}/{user_idx}_sensorData.csv'
-raw_gleam_label =  root + '/data/raw/GLEAM/{user_idx}/{user_idx}_annotate.csv'
+raw_uci =  root + '{group}/Inertial Signals/{loc}_{sensor}_{axis}_{group}.txt'
+raw_uci_label =  root + '{group}/y_{group}.txt'
+raw_uci_subject =  root + '{group}/subject_{group}.txt'
 
 
-# train data
-train_realworld =  root + '/data/train/realworld/{}.pkl'
-online_realworld =  root + '/data/train/realworld/online/{}.pkl'
-
-online_uci =  root + '/data/train/uci/{}.pkl'
-
-online_gleam =  root + '/data/train/gleam/{}.pkl'
-
-# drift result for sup-online
-drift_sup_online =  root + '/result/drift/sup-online/{}.pkl'
-drift_sup_online_continue =  root + '/result/drift/sup-online/continue/{}.pkl'
+online_uci =   '/headless/Desktop/{}.pkl'
 
 # feder result
-feder = root + '/result/feder/{dataset}/{samples} samples/{model}/{name}.pkl'
-feder_csv =  root + '/result/feder/csv/{}.csv'
+feder = out + '/result/feder/{dataset}/{model}/fedavg/{name}.pkl'
 
 # personalize
-personalize =  root + '/result/personalize/{dataset}/{samples} samples/{user}/{name}.pkl'
+personalize =  root + '/result/personalize/{dataset}/{samples}_samples/{user}/{name}.pkl'
 temp_personalize_csv =  root + '/result/personalize/{dataset}/csv/{dataset}_{name}.csv'
 
 # arg
-arg = root + '/result/arg/{dataset}/{samples} samples/{arg}/{name}.pkl'
+arg = root + '/result/arg/{dataset}/{samples}_samples/{arg}/{name}.pkl'
 
 # loss
-loss = root + '/result/loss/{dataset}/{samples} samples/{name}.pkl'
-
-# attention imp
-att_imp =  root + '/result/attention/{}.pkl'
+loss = root + '/result/loss/{dataset}/{samples}_samples/{name}.pkl'

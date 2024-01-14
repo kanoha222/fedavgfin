@@ -12,13 +12,18 @@ class cluster:
     def clear(self):
         self.staff_gl.clear()
         self.mean_gl.clear()
-    def compute_grad_gl(self, metric):
+    def compute_grad_gl(self,metric):
         for staff in self.staff_list:
-            gl_dict = staff.compute_grad(metric=metric)
-            self.staff_gl.append(gl_dict)
+
+            idx = self.staff_list.index(staff)
+            gl_dict = staff.compute_grad(idx=idx,optimizer_list=self.optimizer_list,metric=metric)
+            if not staff.is_local:
+                self.staff_gl.append(gl_dict)
     def compute_grad_mean(self,sever:server):
         sever.mean_update_cluster(self)
     def get_flat_grad(self):
         for mean_gl_dict in self.mean_gl:
             for name in list(mean_gl_dict.keys()):
-                self.flat_grad = torch.cat((self.flat_grad, mean_gl_dict[name].flatten()), dim=0)
+                #将二维的梯度展平
+                flatten_grad = mean_gl_dict[name].flatten() if mean_gl_dict[name].dim() == 2 else mean_gl_dict[name]
+                self.flat_grad = torch.cat((self.flat_grad, flatten_grad))

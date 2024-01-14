@@ -3,13 +3,11 @@ from util import data_process
 
 
 class Database:
-    def __init__(self, sup_seconds, sup_fresh, sup_samples, semi_seconds, semi_fresh, time_window,
+    def __init__(self, sup_seconds, sup_fresh, sup_samples, time_window,
                  allow_rate, freq_rate, data_path):
         self.sup_seconds = sup_seconds
         self.sup_fresh = sup_fresh
         self.sup_samples = sup_samples
-        self.semi_seconds = semi_seconds
-        self.semi_fresh = semi_fresh
         self.time_window = time_window
         self.allow_rate = allow_rate
         self.freq_rate = freq_rate

@@ -8,39 +8,42 @@ from abc import abstractmethod
 from tqdm import tqdm
 from role import cluster
 import torch
+import wandb
+from util.rdp_analysis import calibrating_sampled_gaussian
+q = 0.08
+eps = 4
+bad_envent = 1e-5
+
 class Trainer:
-    def __init__(self, batch_size, min_second, max_second, lap, log_path, save_path, epochs, max_run, batch_amp,
+    def __init__(self,lap, log_path, save_path, epochs, max_run,
                  sup_batch_size, eval_seed,cluster_limit):
         self.max_run = max_run
-        self.batch_size = batch_size
-        self.min_second = min_second
-        self.max_second = max_second
         self.lap = lap
         self.save_path = save_path
         self.log_path = log_path
         self.epochs = epochs
-        self.batch_amp = batch_amp
         self.sup_batch_size = sup_batch_size
         self.eval_seed = eval_seed
         self.cluster_limit = cluster_limit
+        #checkpoint用于保存run_idx
         self.checkpoint = self.make_checkpoint()
-
+        self.loadpoint = self.make_loadpoint()
         self.run_idx = None
         self.db = None
-        # self.staff_user = None
-        self.model_list = None
-        self.optimizer_list = None
+        self.model = None
+        self.optimizer = None
         self.start_epoch, self.record = None, None
-
         self.eval_loader_list = None
         self.eval_score = None
         self.staff_list = None
-        # self.client_list = None
         self.sever = None
-        self.clusters = None
+        # self.clusters = None
+        self.wandb = None
+        self.sigma = None
     def make_checkpoint(self):
-        return utils.CheckPoint(self.log_path)
-
+        return utils.Point(self.log_path)
+    def make_loadpoint(self):
+        return utils.Point(self.save_path)
     def start(self, **kwargs):
         if not self.check_run():
             return
@@ -50,8 +53,8 @@ class Trainer:
         while self.check_run():
             self.run_idx = self.create_read_run()
             #创建模型和优化器
-            self.model_list = self.create_read_model_list()
-            self.optimizer_list = self.create_read_optimizer_list()
+            self.model = self.create_read_model()
+            self.optimizer = self.create_read_optimizer()
 
             #读取训练记录中的start和record
             self.start_epoch, self.record = self.create_read_args()
@@ -60,10 +63,18 @@ class Trainer:
             self.sever = self.make_sever()
             #创建客户端列表
             self.staff_list = self.make_staffs()
+            self.wandb = wandb.init( project=f'myfedhar',
+                                     group='fedavg',
+                                     name=f'test1',
+                                     config={
+                                             'optimizer': 'Adam',
+                                             'learning_rate': 0.001} )
+
             #创建聚类list
-            self.clusters = self.create_clusters()
+            # self.clusters = self.create_read_clusters()
             #创建评分
             self.eval_score = self.make_score()
+            # self.sigma = calibrating_sampled_gaussian(q,eps, bad_envent,iters = self.epochs)
             self.before_train(kwargs['verbose'])
             self.train(verbose=kwargs['verbose'], show_idx=kwargs['show_idx'], log_idx=kwargs['log_idx'],
                        tqdm_verbose=kwargs['tqdm_verbose'] if 'tqdm_verbose' in kwargs.keys() else None)
@@ -110,20 +121,13 @@ class Trainer:
         return start, record
 
     @abstractmethod
-    def create_read_model_list(self):
+    def create_read_model(self):
         pass
 
-    def create_read_optimizer_list(self):
-        optimizer_list = []
-        #adam优化器，用于优化模型参数
-        for model in self.model_list:
-            optimizer = torch.optim.Adam(model.parameters(), betas=(0.9, 0.99), weight_decay=0.0005)
-            optimizer_list.append(optimizer)
-        if self.checkpoint.get('optimizer_list') is not None:
-            optimizers = self.checkpoint.get('optimizer_list')
-            for key,value in optimizers.items():
-                optimizer_list[key].load_state_dict(value)
-        return optimizer_list
+    def create_read_optimizer(self):
+        # optimizer_list = []
+        optimizer = torch.optim.Adam(self.model.parameters(), betas=(0.9, 0.99), weight_decay=0.0005,lr=0.001)
+        return optimizer
     #创建数据库
     def make_eval_loaders(self):
         eval_loader_list = []
@@ -144,15 +148,18 @@ class Trainer:
 
     def make_staffs(self):
         staff_list = []
-        for staff_idx in range(self.db.owner.user_count):
-            staff = cli.Staff(self.db.owner, staff_idx, self.db.sup_samples, self.model_list[staff_idx], self.sup_batch_size)
-            staff.train_init(seconds=self.db.sup_seconds, fresh=self.db.sup_fresh, lap=0.)
-            staff_list.append(staff)
+        if self.loadpoint.get('staff_list') is not None:
+            staff_list = self.loadpoint.get('staff_list')
+        else:
+            for staff_idx in range(self.db.owner.user_count):
+                staff = cli.Staff(self.db.owner, staff_idx, self.db.sup_samples, self.model, self.sup_batch_size)
+                staff.train_init(seconds=self.db.sup_seconds, fresh=self.db.sup_fresh, lap=0.)
+                staff_list.append(staff)
 
         return staff_list
 
     def eval(self):
-        result_list = [train_utils.eval(self.model_list[user_idx], self.eval_loader_list[user_idx], self.eval_score)
+        result_list = [train_utils.eval(self.model, self.eval_loader_list[user_idx], self.eval_score)
                        for user_idx in range(self.db.owner.user_count)]
         #评估模式下的平均损失
         mean_value = {key: np.mean([result[key] for result in result_list]) for key in result_list[0].keys()}
@@ -161,7 +168,6 @@ class Trainer:
 
     def save(self):
         save = self.make_save_dict()
-        print(save.keys())
         utils.write_pkl(self.save_path.format(self.run_idx), save)
         self.run_idx = self.run_idx + 1
         self.checkpoint.clear()
@@ -169,7 +175,14 @@ class Trainer:
         self.checkpoint.write()
 
     def make_save_dict(self):
-        return {'model_list': [model.cpu().state_dict() for model in  self.model_list], 'record': self.record}
+        # clusters_show = []
+        # i = 0
+        # for cluster in self.clusters:
+        #     cluster_dict = {f'cluster_{i}': [staff.user_idx for staff in cluster.staff_list]}
+        #     clusters_show.append(cluster_dict)
+        #     i += 1
+        return {'model': self.model.cpu().state_dict(), 'record': self.record}
+
 
     @abstractmethod
     def make_clients(self):
@@ -205,30 +218,24 @@ class Trainer:
             if verbose:
                 for result in result_list:
                     train_utils.show_result(ep, result)
-                train_utils.show_result(ep, '****mean: ', mean_value)
+                # clusters_show = []
+                # if ep > 4:
+                #     i = 0
+                #     for cluster in self.clusters:
+                #         cluster_dict = {f'cluster_{i}': [staff.user_idx for staff in cluster.staff_list] }
+                #         clusters_show.append(cluster_dict)
+                #         i += 1
+                train_utils.show_result(ep, '****mean: ', mean_value,'\n'
+                                        # ,clusters_show if clusters_show is not None else None
+                                        )
+
+            all_loss = {f'staff_{user_idx}_loss': result_list[user_idx]['eval_loss'] for user_idx in range(self.db.owner.user_count)}
+            all_acc = {f'staff_{user_idx}_acc': result_list[user_idx]['eval_acc'] for user_idx in range(self.db.owner.user_count)}
+            all_f1 = {f'staff_{user_idx}_f1': result_list[user_idx]['f1'] for user_idx in range(self.db.owner.user_count)}
+            self.wandb.log({**all_loss,**all_acc,**all_f1})
             self.record.append([ep, mean_value, result_list])
 
         if ep % (log_idx / 10) == 0:
-            models = {}
-            opentimizers = {}
-            for index in self.db.owner.user_count:
-                models[index] = self.model_list[index].state_dict()
-                opentimizers[index] = self.optimizer_list[index].state_dict()
-            self.checkpoint.update(start=ep, models=models, record=self.record,
-                                   optimizers=opentimizers, **kwargs)
+            self.checkpoint.update(start=ep, model=self.model.state_dict(), record=self.record,
+                                   optimizer=self.optimizer.state_dict(), **kwargs)
             self.checkpoint.write()
-    def create_clusters(self):
-        clusters = []
-        for staff in self.staff_list:
-            clusters.append(cluster.cluster([staff], [self.optimizer_list[staff.user_idx]]))
-        return clusters
-    def clusters_update(self,simility_metrix,cluster_limit):
-        max_cosine_index = simility_metrix.unstack().idxmax()
-        max_cosine_value = simility_metrix.unstack().max()
-        if max_cosine_value > cluster_limit:
-            self.clusters[max_cosine_index[0]].staff_list.append(self.clusters[max_cosine_index[1]].staff_list)
-            self.clusters[max_cosine_index[0]].optimizer_list.append(self.clusters[max_cosine_index[1]].optimizer_list)
-            self.clusters[max_cosine_index[0]].staff_gl.append(self.clusters[max_cosine_index[1]].staff_gl)
-            self.clusters.remove(self.clusters[max_cosine_index[1]])
-    def cos_similarities(self):
-        pass

@@ -7,7 +7,6 @@ class BaseATTModel(mod.ATTModel):
     SERIES_OUT = 256
     DEVICE_OUT = 64
     SENSOR_OUT = 32
-
     def __init__(self, class_num, sensor_dim, num_in_sensors, devices, series_dropout=0., device_dropout=0., sensor_dropout=0., predict_dropout=0.):
         super(BaseATTModel, self).__init__(class_num, sensor_dim, num_in_sensors, devices, series_dropout, device_dropout, sensor_dropout, predict_dropout)
 

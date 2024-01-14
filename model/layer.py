@@ -30,22 +30,5 @@ class Attention(Module):
         self.record_value = None
         self.record = False
 
-class MultiClassCrossEntropy:
-    def __init__(self, T :int):
-        self.T = T
-
-    def __call__(self, logits :torch.Tensor, labels :torch.Tensor):
-        outputs = torch.log_softmax(logits/self.T, dim=1)
-        labels = torch.softmax(labels/self.T, dim=1)
-        outputs = torch.sum(outputs * labels, dim=1, keepdim=False)
-        outputs = -torch.mean(outputs, dim=0, keepdim=False)
-        return outputs
-
-class ProbCrossEntropy:
-    def __init__(self, loss_fn):
-        self.loss_fn = loss_fn
-
-    def __call__(self, logits :torch.Tensor):
-        return self.loss_fn(logits[1:], logits[:-1])
 
 

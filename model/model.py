@@ -18,7 +18,6 @@ class ATTModel(Module):
         self.device_dropout = device_dropout
         self.sensor_dropout = sensor_dropout
         self.predict_dropout = predict_dropout
-
         self.series_attention_layers = []
         self.device_attention_layers = []
         #冒号后跟的是类型
@@ -41,6 +40,7 @@ class ATTModel(Module):
             self.device_attention_layers.append(device_attention)
         #构建传感器注意力层（sensor）第三层
         self.sensor_attention_layer, self.sensor_attention = self.attention4sensor(self.DEVICE_OUT, self.SENSOR_OUT)
+
         #输出层
         self.predictor = self.merge_module(self.SENSOR_OUT, class_num)
 
@@ -78,6 +78,8 @@ class ATTModel(Module):
     def merge_module(self, input_feature, out_feature) -> Module:
         pass
 
+    def get_full_connect(self, input_feature, out_feature):
+        pass
     def record_on(self, codes):
         if self.IMP4SENSORS in codes:
             self.sensor_attention.record_on()
