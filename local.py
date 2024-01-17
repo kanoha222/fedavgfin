@@ -2,7 +2,7 @@ import numpy as np
 
 import train.trainer
 from model import att_model
-from util import data_process,train_utils,data_util
+from util import data_process, train_utils, data_util, utils
 from util.device import device,to_device
 import util.Path as Path
 import torch
@@ -114,16 +114,20 @@ if __name__ == '__main__':
     optimizer = create_read_optimizer(model)
     staff = Staff(db, 0, 100, model, sup_batch_size)
     staff.train_init(seconds=sup_seconds, fresh=sup_fresh, lap=0.)
-    epoch = tqdm(i)
-    recode = []
-    for i in range(0,999):
+    epoch = range(1, 1000)
+    epoch = tqdm(epoch)
+    record = []
+    for i in epoch:
         staff.compute_grad(metric=True)
         optimizer.step()
         optimizer.zero_grad()
         if 1:
             train_utils.show_result(i, [staff.train_score.value()['loss']])
         result = eval(model)
-        train_utils.show_result('eval', result)
+        train_utils.show_result(f'{i}', result)
+        record.append([i, result])
 
+    utils.write_pkl((Path.feder.format(dataset='uci',
+                                    model="stochastic_near", name='local')), record)
 
 
