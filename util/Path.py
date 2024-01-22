@@ -10,7 +10,7 @@ raw_uci_subject =  root + '{group}/subject_{group}.txt'
 online_uci =   '/headless/Desktop/{}.pkl'
 
 # feder result
-feder = out + '/result/feder/{dataset}/{model}/fedavg/{name}.pkl'
+feder = out + '/result/feder/{dataset}/{model}/local/{name}.pkl'
 
 # personalize
 personalize =  root + '/result/personalize/{dataset}/{samples}_samples/{user}/{name}.pkl'
