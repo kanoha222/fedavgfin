@@ -117,6 +117,12 @@ if __name__ == '__main__':
     epoch = range(1, 1000)
     epoch = tqdm(epoch)
     record = []
+    wandb = wandb.init(project=f'myfedhar',
+                            group='local',
+                            name=f'test1',
+                            config={
+                                'optimizer': 'Adam',
+                                'learning_rate': 0.001})
     for i in epoch:
         staff.compute_grad(metric=True)
         optimizer.step()
@@ -126,7 +132,7 @@ if __name__ == '__main__':
         result = eval(model)
         train_utils.show_result(f'{i}', result)
         record.append([i, result])
-
+        wandb.log({'train_loss': staff.train_score.value()['loss'], 'eval_acc': result[0]['eval_acc'], 'f1': result[0]['f1']})
     utils.write_pkl((Path.feder.format(dataset='uci',
                                     model="stochastic_near", name='local')), record)
 
